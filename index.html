@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>CemabJS</title>
+
+    <!-- CodeMirror -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+    <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/material-darker.min.css">
+
+    <style>
+        body {
+            margin: 0;
+            background: #0f172a;
+            color: white;
+            font-family: Arial;
+        }
+
+        header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+
+            padding: 12px 20px;
+            border-bottom: 1px solid #1f2937;
+
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        /* controla o tamanho do ícone */
+        header img {
+            width: 32px;
+            height: 32px;
+            object-fit: cover;
+            border-radius: 6px;
+        }
+
+        main {
+            max-width: 900px;
+            margin: auto;
+            padding: 20px;
+        }
+
+        button {
+            background: #2563eb;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            margin-right: 10px;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        #saida {
+            background: black;
+            color: #22c55e;
+            padding: 10px;
+            min-height: 120px;
+            border-radius: 6px;
+            margin-top: 15px;
+            font-family: monospace;
+        }
+
+        footer {
+            text-align: center;
+            padding: 12px;
+            border-top: 1px solid #1f2937;
+            font-size: 14px;
+            color: #94a3b8;
+        }
+
+        footer a {
+            color: #60a5fa;
+            text-decoration: none;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <img src="icon.jpeg" alt="CemabJS">
+        <span>CEMAB - JS</span>
+    </header>
+
+    <main>
+
+        <textarea id="editor"></textarea>
+
+        <br><br>
+
+        <button onclick="executar()">▶ Executar</button>
+        <button onclick="limpar()">🧹 Limpar</button>
+        <button onclick="salvar()">💾 Salvar</button>
+        <!-- <button onclick="copiar()">📋 Copiar</button> -->
+
+        <pre id="saida"></pre>
+
+    </main>
+    <footer> Criado com ❤️ por <a href="https://github.com/seu-usuario" target="_blank"> David Sousa </a> </footer>
+    <!-- CodeMirror scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js"></script>
+
+    <script>
+        // Editor
+        let editor = CodeMirror.fromTextArea(document.getElementById("editor"), {
+            mode: "javascript",
+            theme: "material-darker",
+            lineNumbers: true
+        });
+
+        // Executar
+        function executar() {
+            let saida = document.getElementById("saida");
+            saida.innerHTML = "";
+
+            console.log = function (msg) {
+                saida.innerHTML += msg + "<br>";
+            };
+
+            try {
+                eval(editor.getValue());
+            } catch (erro) {
+                saida.innerHTML = erro;
+            }
+        }
+
+        // Copiar
+        function copiar() {
+            navigator.clipboard.writeText(editor.getValue());
+            alert("Código copiado!");
+        }
+
+        // Salvar como .js
+        function salvar() {
+            let nome = prompt("Nome do arquivo:", "");
+            if (!nome) return;
+
+            if (!nome.endsWith(".js")) {
+                nome += ".js";
+            }
+
+            let blob = new Blob([editor.getValue()], { type: "text/javascript" });
+            let link = document.createElement("a");
+
+            link.href = URL.createObjectURL(blob);
+            link.download = nome;
+            link.click();
+        }
+
+        // Limpar Terminal
+        function limpar() {
+            document.getElementById("saida").innerHTML = "";
+        }
+    </script>
+
+</body>
+
+</html>
