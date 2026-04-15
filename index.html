@@ -33,6 +33,15 @@
             cursor: pointer;
         }
 
+        header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 20px;
+            border-bottom: 1px solid #1f2937;
+            font-weight: bold;
+        }
+
         #saida {
             background: black;
             color: #22c55e;
@@ -65,11 +74,21 @@
             background: #000 !important;
             color: #00ff9c !important;
         }
+
+        footer {
+            text-align: center;
+            padding: 12px;
+            border-top: 1px solid #1f2937;
+            color: #94a3b8;
+        }
     </style>
 </head>
 
 <body>
-
+    <header>
+        <img src="icon.jpeg" width="32">
+        CEMAB - JS
+    </header>
     <main>
 
         <textarea id="editor"></textarea>
@@ -78,14 +97,16 @@
 
         <button onclick="executar()">▶ Executar</button>
         <button onclick="limpar()">🧹 Limpar</button>
-
+        <button onclick="salvar()">💾 Salvar</button>
         <pre id="saida"></pre>
 
         <!-- input invisível -->
         <input id="fakeInput" style="opacity:0; position:absolute; left:-9999px;">
 
     </main>
-
+    <footer>
+        Criado com ❤️ por <a href="https://github.com/davidsousadev" target="_blank">David Sousa</a>
+    </footer>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js"></script>
 
@@ -96,15 +117,14 @@
             lineNumbers: true
         });
 
-        // 🔥 AUTO FECHAR { [ (
+        // auto fechar
         editor.on("keydown", (cm, e) => {
             const pairs = { "(": ")", "{": "}", "[": "]" };
-
             if (pairs[e.key]) {
                 e.preventDefault();
-                let cursor = cm.getCursor();
-                cm.replaceRange(e.key + pairs[e.key], cursor);
-                cm.setCursor({ line: cursor.line, ch: cursor.ch + 1 });
+                let c = cm.getCursor();
+                cm.replaceRange(e.key + pairs[e.key], c);
+                cm.setCursor({ line: c.line, ch: c.ch + 1 });
             }
         });
 
@@ -113,55 +133,58 @@
 
         let resolverInput = null;
         let buffer = "";
-        let linhas = [];
         let historico = [];
         let posHistorico = -1;
 
-        // clicar ativa teclado
-        saida.addEventListener("click", () => {
-            fakeInput.focus();
-        });
+        // 🔥 estado real do terminal
+        let terminalTexto = "";
 
-        // prompt vira terminal
-        window.prompt = async (msg) => await input(msg);
+        // ===== CURSOR =====
+        function renderCursor() {
+            saida.innerHTML = "";
 
-        // render SEM quebrar cursor
-        function render() {
-            let texto = linhas.join("\n");
+            const texto = document.createTextNode(terminalTexto);
+            const cursor = document.createElement("span");
 
-            if (resolverInput) {
-                texto += `\n> ${buffer}`;
-            }
+            cursor.className = "cursor";
 
-            saida.innerHTML = texto;
-
-            // 🔥 adiciona cursor separado (NÃO quebra animação)
-            if (resolverInput) {
-                let span = document.createElement("span");
-                span.className = "cursor";
-                saida.appendChild(span);
-            }
+            saida.appendChild(texto);
+            saida.appendChild(cursor);
 
             saida.scrollTop = saida.scrollHeight;
         }
 
+        // ===== PRINT =====
+        function print(txt) {
+            terminalTexto += txt + "\n";
+            renderCursor();
+        }
+
+        // ===== INPUT =====
         function input(msg = "") {
             return new Promise(resolve => {
-                linhas.push(msg);
+                terminalTexto += msg;
+                renderCursor();
+
                 buffer = "";
                 resolverInput = resolve;
-                render();
+
                 fakeInput.focus();
             });
         }
 
-        // 🔥 INPUT MOBILE (CORRIGIDO)
+        // substituir prompt
+        window.prompt = async (msg) => await input(msg);
+
+        // ===== INPUT CAPTURA =====
         fakeInput.addEventListener("input", () => {
             if (!resolverInput) return;
 
             buffer += fakeInput.value;
             fakeInput.value = "";
-            render();
+
+            terminalTexto += buffer.slice(-1);
+            renderCursor();
         });
 
         fakeInput.addEventListener("keydown", (e) => {
@@ -170,11 +193,14 @@
             if (e.key === "Backspace") {
                 e.preventDefault();
                 buffer = buffer.slice(0, -1);
+                terminalTexto = terminalTexto.slice(0, -1);
             }
+
             else if (e.key === "Enter") {
                 e.preventDefault();
 
-                linhas.push("> " + buffer);
+                terminalTexto += "\n";
+
                 historico.push(buffer);
                 posHistorico = historico.length;
 
@@ -182,13 +208,20 @@
                 resolverInput = null;
                 buffer = "";
             }
+
             else if (e.key === "ArrowUp") {
                 e.preventDefault();
                 if (posHistorico > 0) {
                     posHistorico--;
                     buffer = historico[posHistorico];
+
+                    // limpa linha atual
+                    let linhas = terminalTexto.split("\n");
+                    linhas[linhas.length - 1] = "> " + buffer;
+                    terminalTexto = linhas.join("\n");
                 }
             }
+
             else if (e.key === "ArrowDown") {
                 e.preventDefault();
                 if (posHistorico < historico.length - 1) {
@@ -199,33 +232,50 @@
                 }
             }
 
-            render();
+            renderCursor();
         });
 
-        // executar
+        // clicar ativa teclado (mobile incluso)
+        saida.addEventListener("click", () => fakeInput.focus());
+        saida.addEventListener("touchstart", () => fakeInput.focus());
+
+        // ===== EXECUTAR =====
         async function executar() {
-            linhas = [];
+            terminalTexto = "";
             buffer = "";
             resolverInput = null;
-            render();
+            renderCursor();
 
             console.log = (...msg) => {
-                linhas.push(msg.join(" "));
-                render();
+                print(msg.join(" "));
             };
 
             try {
                 await eval(`(async () => { ${editor.getValue()} })()`);
             } catch (e) {
-                linhas.push("Erro: " + e);
-                render();
+                print("Erro: " + e);
             }
         }
 
+        // ===== LIMPAR =====
         function limpar() {
-            linhas = [];
-            render();
+            terminalTexto = "";
+            renderCursor();
         }
+
+        // ===== SALVAR =====
+        function salvar() {
+            let nome = "codigo_" + Date.now() + ".js";
+            let blob = new Blob([editor.getValue()], { type: "text/javascript" });
+
+            let link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = nome;
+            link.click();
+        }
+
+        // iniciar
+        renderCursor();
     </script>
 
 </body>
