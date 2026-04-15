@@ -6,10 +6,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CemabJS</title>
 
-    <!-- CodeMirror -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
     <link rel="stylesheet"
         href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/material-darker.min.css">
+    <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/hint/show-hint.min.css">
 
     <style>
         body {
@@ -55,10 +56,27 @@
             background: black;
             color: #22c55e;
             padding: 10px;
-            min-height: 120px;
+            min-height: 200px;
             border-radius: 6px;
             margin-top: 15px;
             font-family: monospace;
+            white-space: pre-wrap;
+            cursor: text;
+        }
+
+        /* cursor piscando */
+        .cursor {
+            display: inline-block;
+            width: 8px;
+            background: #22c55e;
+            margin-left: 2px;
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            50% {
+                opacity: 0;
+            }
         }
 
         footer {
@@ -76,6 +94,28 @@
 
         footer a:hover {
             text-decoration: underline;
+        }
+
+        /* 🔥 TEMA HACKER */
+        .CodeMirror {
+            background: #000 !important;
+            color: #00ff9c !important;
+        }
+
+        .CodeMirror-cursor {
+            border-left: 2px solid #00ff9c !important;
+        }
+
+        .cm-keyword {
+            color: #00ff9c;
+        }
+
+        .cm-string {
+            color: #22c55e;
+        }
+
+        .cm-number {
+            color: #4ade80;
         }
     </style>
 </head>
@@ -101,13 +141,18 @@
 
     </main>
 
-    <!-- CodeMirror -->
+    <footer>
+        Criado com ❤️ por <a href="https://github.com/davidsousadev" target="_blank">David Sousa</a>
+    </footer>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js"></script>
 
-    <!-- ADDONS IMPORTANTES -->
+    <!-- ADDONS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/closebrackets.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/matchbrackets.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/hint/show-hint.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/hint/javascript-hint.min.js"></script>
 
     <script>
         let editor = CodeMirror.fromTextArea(document.getElementById("editor"), {
@@ -115,56 +160,182 @@
             theme: "material-darker",
             lineNumbers: true,
 
-            // 🔥 AUTO INDENTAÇÃO
             indentUnit: 4,
             tabSize: 4,
-            indentWithTabs: false,
             smartIndent: true,
 
-            // 🔥 FECHAR AUTOMÁTICO {}, (), []
             autoCloseBrackets: true,
             matchBrackets: true,
 
-            // 🔥 TAB FUNCIONANDO
             extraKeys: {
-                "Tab": function (cm) {
-                    if (cm.somethingSelected()) {
-                        cm.indentSelection("add");
-                    } else {
-                        cm.replaceSelection("    ", "end");
-                    }
-                },
-                "Shift-Tab": function (cm) {
-                    cm.indentSelection("subtract");
-                },
-                "Enter": function (cm) {
-                    cm.execCommand("newlineAndIndent");
-                }
+                "Tab": cm => cm.replaceSelection("    "),
+                "Ctrl-Space": "autocomplete",
+                "Enter": cm => cm.execCommand("newlineAndIndent")
             }
         });
 
-        // Executar JS
-        function executar() {
-            let saida = document.getElementById("saida");
-            saida.innerHTML = "";
+        // 🔥 SNIPPETS
+        const snippets = {
+            "for": "for (let i = 0; i < 10; i++) {\n    \n}",
+            "if": "if (condition) {\n    \n}",
+            "while": "while (condition) {\n    \n}",
+            "func": "function nome() {\n    \n}"
+        };
 
-            console.log = function (...msg) {
-                saida.innerHTML += msg.join(" ") + "<br>";
+        // 🔥 PEGAR VARIÁVEIS DO CÓDIGO
+        function getVariables(code) {
+            let vars = [];
+            let regex = /\b(let|const|var|function)\s+([a-zA-Z_$][\w$]*)/g;
+            let match;
+
+            while ((match = regex.exec(code))) {
+                vars.push(match[2]);
+            }
+
+            return vars;
+        }
+
+        // 🔥 AUTOCOMPLETE PRO
+        editor.on("inputRead", function (cm, change) {
+            let cursor = cm.getCursor();
+            let token = cm.getTokenAt(cursor);
+            let word = token.string;
+
+            // snippets
+            if (snippets[word]) {
+                cm.replaceRange(snippets[word], {
+                    line: cursor.line,
+                    ch: token.start
+                }, {
+                    line: cursor.line,
+                    ch: token.end
+                });
+                return;
+            }
+
+            // autocomplete normal
+            if (word.match(/[a-zA-Z]/)) {
+                let code = cm.getValue();
+                let vars = getVariables(code);
+
+                let list = [
+                    "console", "log", "Math", "random",
+                    "document", "window", "alert","prompt",
+                    ...vars
+                ];
+
+                CodeMirror.showHint(cm, function () {
+                    return {
+                        list: list,
+                        from: CodeMirror.Pos(cursor.line, token.start),
+                        to: CodeMirror.Pos(cursor.line, token.end)
+                    };
+                });
+            }
+        });
+
+        // 🔥 FECHAMENTO INTELIGENTE
+        editor.on("keydown", function (cm, e) {
+            const pairs = { "(": ")", "{": "}", "[": "]" };
+
+            if (pairs[e.key]) {
+                e.preventDefault();
+                const doc = cm.getDoc();
+                const cursor = doc.getCursor();
+
+                doc.replaceRange(e.key + pairs[e.key], cursor);
+                doc.setCursor({ line: cursor.line, ch: cursor.ch + 1 });
+            }
+        });
+
+        let saida = document.getElementById("saida");
+
+        let resolverInput = null;
+        let buffer = "";
+        let linhas = [];
+        let historico = [];
+        let posHistorico = -1;
+
+        // prompt vira input
+        window.prompt = async (msg) => await input(msg);
+
+        function render() {
+            saida.innerHTML = linhas.join("\n") +
+                (resolverInput ? `\n> ${buffer}<span class="cursor">&nbsp;</span>` : "");
+            saida.scrollTop = saida.scrollHeight;
+        }
+
+        function input(msg = "") {
+            return new Promise(resolve => {
+                linhas.push(msg);
+                buffer = "";
+                resolverInput = resolve;
+                render();
+            });
+        }
+
+        // 🔥 TERMINAL COM HISTÓRICO
+        document.addEventListener("keydown", function (e) {
+            if (!resolverInput) return;
+
+            e.preventDefault();
+
+            if (e.key === "Backspace") {
+                buffer = buffer.slice(0, -1);
+            }
+            else if (e.key === "Enter") {
+                linhas.push("> " + buffer);
+                historico.push(buffer);
+                posHistorico = historico.length;
+
+                resolverInput(buffer);
+                resolverInput = null;
+                buffer = "";
+            }
+            else if (e.key === "ArrowUp") {
+                if (posHistorico > 0) {
+                    posHistorico--;
+                    buffer = historico[posHistorico];
+                }
+            }
+            else if (e.key === "ArrowDown") {
+                if (posHistorico < historico.length - 1) {
+                    posHistorico++;
+                    buffer = historico[posHistorico];
+                } else {
+                    buffer = "";
+                }
+            }
+            else if (e.key.length === 1) {
+                buffer += e.key;
+            }
+
+            render();
+        });
+
+        // executar
+        async function executar() {
+            linhas = [];
+            buffer = "";
+            resolverInput = null;
+            render();
+
+            console.log = (...msg) => {
+                linhas.push(msg.join(" "));
+                render();
             };
 
             try {
-                eval(editor.getValue());
-            } catch (erro) {
-                saida.innerHTML = erro;
+                await eval(`(async () => { ${editor.getValue()} })()`);
+            } catch (e) {
+                linhas.push("Erro: " + e);
+                render();
             }
         }
 
-        // Salvar
+        // salvar
         function salvar() {
-            let nome = prompt("Nome do arquivo:", "");
-            if (!nome) return;
-
-            if (!nome.endsWith(".js")) nome += ".js";
+            let nome = "codigo_" + Date.now() + ".js";
 
             let blob = new Blob([editor.getValue()], { type: "text/javascript" });
             let link = document.createElement("a");
@@ -174,9 +345,9 @@
             link.click();
         }
 
-        // Limpar
         function limpar() {
-            document.getElementById("saida").innerHTML = "";
+            linhas = [];
+            render();
         }
     </script>
 
