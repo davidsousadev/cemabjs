@@ -9,8 +9,6 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
     <link rel="stylesheet"
         href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/material-darker.min.css">
-    <link rel="stylesheet"
-        href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/hint/show-hint.min.css">
 
     <style>
         body {
@@ -26,14 +24,7 @@
             gap: 10px;
             padding: 12px 20px;
             border-bottom: 1px solid #1f2937;
-            font-size: 18px;
             font-weight: bold;
-        }
-
-        header img {
-            width: 32px;
-            height: 32px;
-            border-radius: 6px;
         }
 
         main {
@@ -46,8 +37,7 @@
             background: #2563eb;
             color: white;
             border: none;
-            padding: 10px 15px;
-            margin-right: 10px;
+            padding: 10px;
             border-radius: 6px;
             cursor: pointer;
         }
@@ -56,7 +46,7 @@
             background: black;
             color: #22c55e;
             padding: 10px;
-            min-height: 200px;
+            min-height: 220px;
             border-radius: 6px;
             margin-top: 15px;
             font-family: monospace;
@@ -64,12 +54,10 @@
             cursor: text;
         }
 
-        /* cursor piscando */
         .cursor {
             display: inline-block;
             width: 8px;
             background: #22c55e;
-            margin-left: 2px;
             animation: blink 1s infinite;
         }
 
@@ -83,20 +71,9 @@
             text-align: center;
             padding: 12px;
             border-top: 1px solid #1f2937;
-            font-size: 14px;
             color: #94a3b8;
         }
 
-        footer a {
-            color: #60a5fa;
-            text-decoration: none;
-        }
-
-        footer a:hover {
-            text-decoration: underline;
-        }
-
-        /* 🔥 TEMA HACKER */
         .CodeMirror {
             background: #000 !important;
             color: #00ff9c !important;
@@ -105,32 +82,19 @@
         .CodeMirror-cursor {
             border-left: 2px solid #00ff9c !important;
         }
-
-        .cm-keyword {
-            color: #00ff9c;
-        }
-
-        .cm-string {
-            color: #22c55e;
-        }
-
-        .cm-number {
-            color: #4ade80;
-        }
     </style>
 </head>
 
 <body>
 
     <header>
-        <img src="icon.jpeg">
-        <span>CEMAB - JS</span>
+        <img src="icon.jpeg" width="32">
+        CEMAB - JS
     </header>
 
     <main>
 
         <textarea id="editor"></textarea>
-
         <br><br>
 
         <button onclick="executar()">▶ Executar</button>
@@ -138,6 +102,9 @@
         <button onclick="salvar()">💾 Salvar</button>
 
         <pre id="saida"></pre>
+
+        <!-- input invisível -->
+        <input id="fakeInput" style="opacity:0; position:absolute; left:-9999px;">
 
     </main>
 
@@ -148,107 +115,29 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js"></script>
 
-    <!-- ADDONS -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/closebrackets.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/matchbrackets.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/hint/show-hint.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/hint/javascript-hint.min.js"></script>
-
     <script>
         let editor = CodeMirror.fromTextArea(document.getElementById("editor"), {
             mode: "javascript",
             theme: "material-darker",
             lineNumbers: true,
-
-            indentUnit: 4,
-            tabSize: 4,
-            smartIndent: true,
-
             autoCloseBrackets: true,
-            matchBrackets: true,
-
-            extraKeys: {
-                "Tab": cm => cm.replaceSelection("    "),
-                "Ctrl-Space": "autocomplete",
-                "Enter": cm => cm.execCommand("newlineAndIndent")
-            }
+            matchBrackets: true
         });
 
-        // 🔥 SNIPPETS
-        const snippets = {
-            "for": "for (let i = 0; i < 10; i++) {\n    \n}",
-            "if": "if (condition) {\n    \n}",
-            "while": "while (condition) {\n    \n}",
-            "func": "function nome() {\n    \n}"
-        };
-
-        // 🔥 PEGAR VARIÁVEIS DO CÓDIGO
-        function getVariables(code) {
-            let vars = [];
-            let regex = /\b(let|const|var|function)\s+([a-zA-Z_$][\w$]*)/g;
-            let match;
-
-            while ((match = regex.exec(code))) {
-                vars.push(match[2]);
-            }
-
-            return vars;
-        }
-
-        // 🔥 AUTOCOMPLETE PRO
-        editor.on("inputRead", function (cm, change) {
-            let cursor = cm.getCursor();
-            let token = cm.getTokenAt(cursor);
-            let word = token.string;
-
-            // snippets
-            if (snippets[word]) {
-                cm.replaceRange(snippets[word], {
-                    line: cursor.line,
-                    ch: token.start
-                }, {
-                    line: cursor.line,
-                    ch: token.end
-                });
-                return;
-            }
-
-            // autocomplete normal
-            if (word.match(/[a-zA-Z]/)) {
-                let code = cm.getValue();
-                let vars = getVariables(code);
-
-                let list = [
-                    "console", "log", "Math", "random",
-                    "document", "window", "alert","prompt",
-                    ...vars
-                ];
-
-                CodeMirror.showHint(cm, function () {
-                    return {
-                        list: list,
-                        from: CodeMirror.Pos(cursor.line, token.start),
-                        to: CodeMirror.Pos(cursor.line, token.end)
-                    };
-                });
-            }
-        });
-
-        // 🔥 FECHAMENTO INTELIGENTE
-        editor.on("keydown", function (cm, e) {
+        // 🔥 AUTO FECHAR { [ (
+        editor.on("keydown", (cm, e) => {
             const pairs = { "(": ")", "{": "}", "[": "]" };
 
             if (pairs[e.key]) {
                 e.preventDefault();
-                const doc = cm.getDoc();
-                const cursor = doc.getCursor();
-
-                doc.replaceRange(e.key + pairs[e.key], cursor);
-                doc.setCursor({ line: cursor.line, ch: cursor.ch + 1 });
+                let cursor = cm.getCursor();
+                cm.replaceRange(e.key + pairs[e.key], cursor);
+                cm.setCursor({ line: cursor.line, ch: cursor.ch + 1 });
             }
         });
 
         let saida = document.getElementById("saida");
+        let fakeInput = document.getElementById("fakeInput");
 
         let resolverInput = null;
         let buffer = "";
@@ -256,12 +145,15 @@
         let historico = [];
         let posHistorico = -1;
 
-        // prompt vira input
+        // clicar no terminal ativa teclado
+        saida.addEventListener("click", () => fakeInput.focus());
+
+        // prompt vira terminal
         window.prompt = async (msg) => await input(msg);
 
         function render() {
             saida.innerHTML = linhas.join("\n") +
-                (resolverInput ? `\n> ${buffer}<span class="cursor">&nbsp;</span>` : "");
+                (resolverInput ? `\n> ${buffer}<span class="cursor"></span>` : "");
             saida.scrollTop = saida.scrollHeight;
         }
 
@@ -271,19 +163,29 @@
                 buffer = "";
                 resolverInput = resolve;
                 render();
+                fakeInput.focus(); // 🔥 abre teclado
             });
         }
 
-        // 🔥 TERMINAL COM HISTÓRICO
-        document.addEventListener("keydown", function (e) {
+        // 🔥 INPUT TABLET
+        fakeInput.addEventListener("input", () => {
             if (!resolverInput) return;
 
-            e.preventDefault();
+            buffer += fakeInput.value;
+            fakeInput.value = "";
+            render();
+        });
+
+        fakeInput.addEventListener("keydown", (e) => {
+            if (!resolverInput) return;
 
             if (e.key === "Backspace") {
+                e.preventDefault();
                 buffer = buffer.slice(0, -1);
             }
             else if (e.key === "Enter") {
+                e.preventDefault();
+
                 linhas.push("> " + buffer);
                 historico.push(buffer);
                 posHistorico = historico.length;
@@ -293,21 +195,20 @@
                 buffer = "";
             }
             else if (e.key === "ArrowUp") {
+                e.preventDefault();
                 if (posHistorico > 0) {
                     posHistorico--;
                     buffer = historico[posHistorico];
                 }
             }
             else if (e.key === "ArrowDown") {
+                e.preventDefault();
                 if (posHistorico < historico.length - 1) {
                     posHistorico++;
                     buffer = historico[posHistorico];
                 } else {
                     buffer = "";
                 }
-            }
-            else if (e.key.length === 1) {
-                buffer += e.key;
             }
 
             render();
@@ -333,13 +234,11 @@
             }
         }
 
-        // salvar
         function salvar() {
             let nome = "codigo_" + Date.now() + ".js";
-
             let blob = new Blob([editor.getValue()], { type: "text/javascript" });
-            let link = document.createElement("a");
 
+            let link = document.createElement("a");
             link.href = URL.createObjectURL(blob);
             link.download = nome;
             link.click();
