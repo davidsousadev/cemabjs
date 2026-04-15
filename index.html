@@ -18,15 +18,6 @@
             font-family: Arial;
         }
 
-        header {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 12px 20px;
-            border-bottom: 1px solid #1f2937;
-            font-weight: bold;
-        }
-
         main {
             max-width: 900px;
             margin: auto;
@@ -51,13 +42,15 @@
             margin-top: 15px;
             font-family: monospace;
             white-space: pre-wrap;
-            cursor: text;
         }
 
+        /* cursor bonito */
         .cursor {
             display: inline-block;
             width: 8px;
+            height: 1em;
             background: #22c55e;
+            margin-left: 2px;
             animation: blink 1s infinite;
         }
 
@@ -67,39 +60,24 @@
             }
         }
 
-        footer {
-            text-align: center;
-            padding: 12px;
-            border-top: 1px solid #1f2937;
-            color: #94a3b8;
-        }
-
+        /* tema hacker */
         .CodeMirror {
             background: #000 !important;
             color: #00ff9c !important;
-        }
-
-        .CodeMirror-cursor {
-            border-left: 2px solid #00ff9c !important;
         }
     </style>
 </head>
 
 <body>
 
-    <header>
-        <img src="icon.jpeg" width="32">
-        CEMAB - JS
-    </header>
-
     <main>
 
         <textarea id="editor"></textarea>
+
         <br><br>
 
         <button onclick="executar()">▶ Executar</button>
         <button onclick="limpar()">🧹 Limpar</button>
-        <button onclick="salvar()">💾 Salvar</button>
 
         <pre id="saida"></pre>
 
@@ -108,10 +86,6 @@
 
     </main>
 
-    <footer>
-        Criado com ❤️ por <a href="https://github.com/davidsousadev" target="_blank">David Sousa</a>
-    </footer>
-
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js"></script>
 
@@ -119,9 +93,7 @@
         let editor = CodeMirror.fromTextArea(document.getElementById("editor"), {
             mode: "javascript",
             theme: "material-darker",
-            lineNumbers: true,
-            autoCloseBrackets: true,
-            matchBrackets: true
+            lineNumbers: true
         });
 
         // 🔥 AUTO FECHAR { [ (
@@ -145,15 +117,31 @@
         let historico = [];
         let posHistorico = -1;
 
-        // clicar no terminal ativa teclado
-        saida.addEventListener("click", () => fakeInput.focus());
+        // clicar ativa teclado
+        saida.addEventListener("click", () => {
+            fakeInput.focus();
+        });
 
         // prompt vira terminal
         window.prompt = async (msg) => await input(msg);
 
+        // render SEM quebrar cursor
         function render() {
-            saida.innerHTML = linhas.join("\n") +
-                (resolverInput ? `\n> ${buffer}<span class="cursor"></span>` : "");
+            let texto = linhas.join("\n");
+
+            if (resolverInput) {
+                texto += `\n> ${buffer}`;
+            }
+
+            saida.innerHTML = texto;
+
+            // 🔥 adiciona cursor separado (NÃO quebra animação)
+            if (resolverInput) {
+                let span = document.createElement("span");
+                span.className = "cursor";
+                saida.appendChild(span);
+            }
+
             saida.scrollTop = saida.scrollHeight;
         }
 
@@ -163,11 +151,11 @@
                 buffer = "";
                 resolverInput = resolve;
                 render();
-                fakeInput.focus(); // 🔥 abre teclado
+                fakeInput.focus();
             });
         }
 
-        // 🔥 INPUT TABLET
+        // 🔥 INPUT MOBILE (CORRIGIDO)
         fakeInput.addEventListener("input", () => {
             if (!resolverInput) return;
 
@@ -232,16 +220,6 @@
                 linhas.push("Erro: " + e);
                 render();
             }
-        }
-
-        function salvar() {
-            let nome = "codigo_" + Date.now() + ".js";
-            let blob = new Blob([editor.getValue()], { type: "text/javascript" });
-
-            let link = document.createElement("a");
-            link.href = URL.createObjectURL(blob);
-            link.download = nome;
-            link.click();
         }
 
         function limpar() {
