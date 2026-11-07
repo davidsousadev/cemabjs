@@ -63,6 +63,7 @@ function input(msg = "") {
 }
 
 // substituir prompt
+const promptNativo = window.prompt;
 window.prompt = async (msg) => await input(msg);
 
 // ===== INPUT CAPTURA =====
@@ -155,14 +156,22 @@ function limpar() {
 
 // ===== SALVAR =====
 function salvar() {
-    let nome = "codigo_" + Date.now() + ".js";
+    let nome = promptNativo("Nome do arquivo:", "");
+    if (nome === null) return;
+    nome = nome.trim();
+    if (!nome) return;
+    if (!nome.toLowerCase().endsWith(".js")) {
+        alert("O nome do arquivo deve terminar com .js");
+        return;
+    }
     let blob = new Blob([editor.getValue()], { type: "text/javascript" });
-
     let link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
     link.download = nome;
     link.click();
+    URL.revokeObjectURL(link.href);
 }
+
 
 // iniciar
 
@@ -170,9 +179,9 @@ function salvar() {
 function refreshEditor() {
     setTimeout(function() { try { editor.refresh(); } catch (e) {} }, 150);
 }
-window.addEventListener(' + q + 'resize' + q + ', refreshEditor);
+window.addEventListener("resize", refreshEditor);
 if (window.visualViewport) {
-    window.visualViewport.addEventListener(' + q + 'resize' + q + ', refreshEditor);
+    window.visualViewport.addEventListener("resize", refreshEditor);
 }
 
 renderCursor();
